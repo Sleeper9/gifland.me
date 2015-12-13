@@ -3,20 +3,26 @@ package hu.braso.giflandme;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebView;
 import android.widget.Button;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import org.androidannotations.annotations.AfterViews;
 import org.androidannotations.annotations.Bean;
 import org.androidannotations.annotations.Click;
 import org.androidannotations.annotations.EActivity;
+import org.androidannotations.annotations.InstanceState;
 import org.androidannotations.annotations.ViewById;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -30,6 +36,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 import hu.braso.giflandme.database.GifDataSource;
+import hu.braso.giflandme.model.Gif;
 
 @EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity {
@@ -48,21 +55,26 @@ public class MainActivity extends AppCompatActivity {
     Button prev_gif;
     @ViewById
     Button next_gif;
+    @ViewById
+    TextView gifNumber;
 
     @AfterViews
     void doAfterView() {
         Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(myToolbar);
 
-        next_gif.performClick();
+        if(visitedUrls.isEmpty()){
+            next_gif.performClick();
+        }
     }
 
     @Click(R.id.prev_gif)
     void prevGifClick() {
         try {
-            GifLoaderAsync loaderAsny = new GifLoaderAsync(true);
-            String gif = loaderAsny.execute(visitedUrls.removeLast()).get();
-            gifView.loadUrl(gif);
+            GifLoaderAsync gifLoaderAsync = new GifLoaderAsync(true);
+            Gif gif = gifLoaderAsync.execute(visitedUrls.removeLast()).get();
+            gifView.loadUrl(gif.getPath());
+            gifNumber.setText(getString(R.string.gif_header_text) + gif.getId());
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
@@ -76,17 +88,18 @@ public class MainActivity extends AppCompatActivity {
             boolean xxx = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_xxx_enabled), false);
             if(xxx){
                 boolean xxxOnly = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_xxx_only), false);
-                if (xxxOnly) {
+                if (xxxOnly || new Random().nextBoolean()) {
                     url = URL_18;
+                    ((RelativeLayout) gifView.getParent()).setBackgroundColor(getResources().getColor(android.R.color.holo_red_light));
                 } else {
-                    Random r = new Random();
-                    if(r.nextBoolean()){
-                        url = URL_18;
-                    }
+                    ((RelativeLayout) gifView.getParent()).setBackgroundColor(getResources().getColor(android.R.color.background_light));
                 }
+            } else {
+                ((RelativeLayout) gifView.getParent()).setBackgroundColor(getResources().getColor(android.R.color.background_light));
             }
-            String gif = gifLoaderAsync.execute(url).get();
-            gifView.loadUrl(gif);
+            Gif gif = gifLoaderAsync.execute(url).get();
+            gifView.loadUrl(gif.getPath());
+            gifNumber.setText(getString(R.string.gif_header_text) + gif.getId());
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
@@ -124,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private class GifLoaderAsync extends AsyncTask<String, Void, String> {
+    private class GifLoaderAsync extends AsyncTask<String, Void, Gif> {
 
         private final boolean cached;
 
@@ -133,18 +146,24 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        protected String doInBackground(String... params) {
+        protected Gif doInBackground(String... params) {
             FileOutputStream output = null;
             String fileName = null;
+            int gifId = 0;
+            Gif ret = new Gif();
 
             if(!cached){
                 try {
                     Document document = Jsoup.connect(params[0]).get();
 
-                    int gifId = Integer.parseInt(document.getElementById("gif").getElementsByTag("a").attr("href").substring(1));
+                    gifId = Integer.parseInt(document.getElementById("gif").getElementsByTag("a").attr("href").substring(1));
                     String gifUrl = document.getElementById("gif").getElementsByTag("img").attr("src");
 
                     fileName = "gif-" + gifId + ".gif";
+
+                    ret.setId(gifId);
+                    ret.setUrl(gifUrl);
+                    ret.setXxx(params[0].contains("porn"));
 
                     if (!gifDataSource.exists(gifId)) {
                         InputStream in = new java.net.URL(gifUrl).openStream();
@@ -158,8 +177,8 @@ public class MainActivity extends AppCompatActivity {
                         output.flush();
 
                         visitedUrls.add(fileName);
-
-                        gifDataSource.insert(gifId, gifUrl, PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean(getString(R.string.pref_xxx_enabled), false), fileName);
+                        ret.setPath("file://" + getFileStreamPath(fileName).getAbsolutePath());
+                        gifDataSource.insert(ret);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -174,9 +193,10 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else {
                 fileName = params[0];
+                ret.setPath("file://" + getFileStreamPath(fileName).getAbsolutePath());
             }
 
-            return "file://" + getFileStreamPath(fileName).getAbsolutePath();
+            return ret;
         }
     }
 }

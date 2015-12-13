@@ -11,6 +11,7 @@ import org.androidannotations.annotations.EBean;
 import java.sql.SQLException;
 
 import hu.braso.giflandme.database.contract.GifContract;
+import hu.braso.giflandme.model.Gif;
 
 /**
  * Created by Illés László on 2015.12.13..
@@ -25,16 +26,16 @@ public class GifDataSource {
         dbHelper = new DatabaseHelper(context);
     }
 
-    public void insert(int id, String url, boolean xxx, String content) {
+    public void insert(Gif gif) {
         try{
             openWrite();
 
             ContentValues values = new ContentValues();
 
-            values.put(GifContract.GifEntry._ID, id);
-            values.put(GifContract.GifEntry.COLUMN_URL, url);
-            values.put(GifContract.GifEntry.COLUMN_XXX, xxx ? 1 : 0);
-            values.put(GifContract.GifEntry.COLUMN_CONTENT, content);
+            values.put(GifContract.GifEntry._ID, gif.getId());
+            values.put(GifContract.GifEntry.COLUMN_URL, gif.getUrl());
+            values.put(GifContract.GifEntry.COLUMN_XXX, gif.isXxx() ? 1 : 0);
+            values.put(GifContract.GifEntry.COLUMN_CONTENT, gif.getPath());
 
             database.insert(GifContract.GifEntry.TABLE_NAME, null,  values);
         } catch (SQLException e) {
