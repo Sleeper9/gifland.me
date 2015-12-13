@@ -23,6 +23,7 @@
         <activity
             android:name=".SettingsActivity"
             android:label="@string/action_settings"
+            android:theme="@style/AppTheme.NoActionBar"
             android:parentActivityName=".MainActivity_">
         </activity>
     </application>

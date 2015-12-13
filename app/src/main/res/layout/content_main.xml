@@ -9,8 +9,9 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="hu.braso.giflandme.MainActivity">
-
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context="hu.braso.giflandme.Main2Activity"
+    tools:showIn="@layout/activity_main">
     <WebView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -39,5 +40,4 @@
             android:id="@+id/next_gif"
             android:text="@string/button_next"/>
     </LinearLayout>
-
 </RelativeLayout>
